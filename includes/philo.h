@@ -17,6 +17,7 @@ typedef struct	s_philo
 	int					t2e;
 	int					t2s;
 	int					count_eat;
+	int 				is_dead;
 	t_all				*all;
 	ssize_t				time_life;
 	ssize_t				start_time;

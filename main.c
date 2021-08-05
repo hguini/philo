@@ -10,15 +10,15 @@ ssize_t	get_time(ssize_t start_time)
 
 void	my_usleep(ssize_t time)
 {
-	struct timeval	t1;
-	ssize_t			timing;
+	time_t	start;
+	time_t	end;
 
-	gettimeofday(&t1, NULL);
-	timing = t1.tv_sec * 1000 + t1.tv_usec / 1000;
-	while (time > (t1.tv_sec * 1000 + t1.tv_usec / 1000) - timing)
+	start = get_time(0);
+	end = get_time(0) + time;
+	while (start < end)
 	{
-		gettimeofday(&t1, NULL);
 		usleep(100);
+		start = get_time(0);
 	}
 }
 
@@ -30,11 +30,18 @@ void	get_values(t_all *all, int i, pthread_t *name_thread)
 	all->philo[i].start_time = all->start_time;
 	all->philo[i].index = i;
 	all->philo[i].left_fork = &all->forks_arr[i];
-	all->philo[i].right_fork = &all->forks_arr[(i + 1)
-		% all->count_philo];
+	all->philo[i].right_fork = &all->forks_arr[(i + 1) % all->count_philo];
 	all->philo[i].block_write_chat = all->block_write_chat;
 	all->philo[i].thread = name_thread[i];
 	all->philo[i].count_eat = 0;
+}
+
+void	print_status(t_philo *philo, size_t time, char *message)
+{
+	pthread_mutex_lock(&philo->block_write_chat);
+	printf("%zu Philo %d: %s\n", time, philo->index, message);
+	if (!philo->is_dead)
+		pthread_mutex_unlock(&philo->block_write_chat);
 }
 
 void	take_fork(t_philo *philo)
@@ -42,28 +49,16 @@ void	take_fork(t_philo *philo)
 	if (philo->index % 2 == 0)
 	{
 		pthread_mutex_lock(philo->right_fork);
-		pthread_mutex_lock(&philo->block_write_chat);
-		printf("time %zu, Philo %d take RIGHT fork !\n", \
-				get_time(philo->start_time), philo->index);
-		pthread_mutex_unlock(&philo->block_write_chat);
+		print_status(philo, get_time(philo->start_time), "take RIGHT fork");
 		pthread_mutex_lock(philo->left_fork);
-		pthread_mutex_lock(&philo->block_write_chat);
-		printf("time %zu, Philo %d take LEFT fork!\n", \
-				get_time(philo->start_time), philo->index);
-		pthread_mutex_unlock(&philo->block_write_chat);
+		print_status(philo, get_time(philo->start_time), "take LEFT fork");
 	}
 	else
 	{
 		pthread_mutex_lock(philo->left_fork);
-		pthread_mutex_lock(&philo->block_write_chat);
-		printf("time %zu, Philo %d take LEFT fork!\n", \
-				get_time(philo->start_time), philo->index);
-		pthread_mutex_unlock(&philo->block_write_chat);
+		print_status(philo, get_time(philo->start_time), "take LEFT fork");
 		pthread_mutex_lock(philo->right_fork);
-		pthread_mutex_lock(&philo->block_write_chat);
-		printf("time %zu, Philo %d take RIGHT fork !\n", \
-				get_time(philo->start_time), philo->index);
-		pthread_mutex_unlock(&philo->block_write_chat);
+		print_status(philo, get_time(philo->start_time), "take RIGHT fork");
 	}
 }
 
@@ -71,24 +66,18 @@ void	philo_eating(t_philo *philo)
 {
 	if (philo->index % 2 == 0)
 	{
-		pthread_mutex_lock(&philo->block_write_chat);
-		printf("time %zu, Philo %d eating!\n", \
-				get_time(philo->start_time), philo->index);
+		print_status(philo, get_time(philo->start_time), "eating");
 		++philo->count_eat;
 		philo->time_life = get_time(0);
-		pthread_mutex_unlock(&philo->block_write_chat);
 		my_usleep(philo->t2e);
 		pthread_mutex_unlock(philo->right_fork);
 		pthread_mutex_unlock(philo->left_fork);
 	}
 	else
 	{
-		pthread_mutex_lock(&philo->block_write_chat);
-		printf("time %zu, Philo %d eating!\n", \
-				get_time(philo->start_time), philo->index);
+		print_status(philo, get_time(philo->start_time), "eating");
 		++philo->count_eat;
 		philo->time_life = get_time(0);
-		pthread_mutex_unlock(&philo->block_write_chat);
 		my_usleep(philo->t2e);
 		pthread_mutex_unlock(philo->left_fork);
 		pthread_mutex_unlock(philo->right_fork);
@@ -97,19 +86,13 @@ void	philo_eating(t_philo *philo)
 
 void	philo_sleeping(t_philo *philo)
 {
-	pthread_mutex_lock(&philo->block_write_chat);
-	printf("time %zu, Philo %d sleeping!\n", \
-			get_time(philo->start_time), philo->index);
-	pthread_mutex_unlock(&philo->block_write_chat);
+	print_status(philo, get_time(philo->start_time), "sleeping");
 	my_usleep(philo->t2s);
 }
 
 void	philo_thinking(t_philo *philo)
 {
-	pthread_mutex_lock(&philo->block_write_chat);
-	printf("time %zu, Philo %d thinking!\n", \
-			get_time(philo->start_time), philo->index);
-	pthread_mutex_unlock(&philo->block_write_chat);
+	print_status(philo, get_time(philo->start_time), "thinking");
 }
 
 void	*philo(void *philo)
@@ -141,9 +124,8 @@ void	*monitoring(void *global)
 		{
 			if (all->t2d < get_time(all->philo[i].time_life))
 			{
-				pthread_mutex_lock(&all->block_write_chat);
-				printf("time %zu, Philo %d die\n", \
-						get_time(all->start_time), i);
+				all->philo->is_dead = 1;
+				print_status(all->philo, get_time(all->start_time), "die");
 				return (NULL);
 			}
 			++i;
@@ -166,8 +148,8 @@ void	start_philo(t_all *all)
 		pthread_mutex_init(&all->forks_arr[i], NULL);
 		++i;
 	}
-	pthread_mutex_init(&all->block_write_chat, NULL);
 	i = 0;
+	pthread_mutex_init(&all->block_write_chat, NULL);
 	while (i < all->count_philo)
 	{
 		get_values(all, i, philosophs);
