@@ -6,7 +6,6 @@
 # include <pthread.h>
 # include <stdlib.h>
 # include <sys/time.h>
-# include "../libft/libft.h"
 
 typedef struct s_all	t_all;
 
@@ -22,10 +21,9 @@ typedef struct	s_philo
 	ssize_t				time_life;
 	ssize_t				start_time;
 	pthread_t			thread;
-	pthread_mutex_t 	*fork_arr;
 	pthread_mutex_t		*left_fork;
 	pthread_mutex_t		*right_fork;
-	pthread_mutex_t		block_write_chat;
+	// pthread_mutex_t		block_write_chat;
 }				t_philo;
 
 typedef struct	s_all
@@ -41,6 +39,7 @@ typedef struct	s_all
 	t_philo	*philo;
 }				t_all;
 
+int	ft_atoi(char *str);
 
 
 #endif

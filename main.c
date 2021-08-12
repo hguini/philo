@@ -1,4 +1,4 @@
-#include "philo.h"
+#include "includes/philo.h"
 
 ssize_t	get_time(ssize_t start_time)
 {
@@ -29,19 +29,23 @@ void	get_values(t_all *all, int i, pthread_t *name_thread)
 	all->philo[i].t2s = all->t2s;
 	all->philo[i].start_time = all->start_time;
 	all->philo[i].index = i;
+	all->philo[i].is_dead = 0;
+	all->philo[i].time_life = get_time(0);
 	all->philo[i].left_fork = &all->forks_arr[i];
 	all->philo[i].right_fork = &all->forks_arr[(i + 1) % all->count_philo];
-	all->philo[i].block_write_chat = all->block_write_chat;
+	all->philo[i].all = all;
+	// all->philo[i].block_write_chat = all->block_write_chat;
 	all->philo[i].thread = name_thread[i];
 	all->philo[i].count_eat = 0;
 }
 
 void	print_status(t_philo *philo, size_t time, char *message)
 {
-	pthread_mutex_lock(&philo->block_write_chat);
+	// printf("%d\n", philo->all->t2d);
+	pthread_mutex_lock(&philo->all->block_write_chat);
 	printf("%zu Philo %d: %s\n", time, philo->index, message);
 	if (!philo->is_dead)
-		pthread_mutex_unlock(&philo->block_write_chat);
+		pthread_mutex_unlock(&philo->all->block_write_chat);
 }
 
 void	take_fork(t_philo *philo)
@@ -101,7 +105,6 @@ void	*philo(void *philo)
 
 	philosoph = (t_philo *)philo;
 	pthread_detach(philosoph->thread);
-	philosoph->time_life = get_time(0);
 	while(1)
 	{
 		take_fork(philosoph);
@@ -122,7 +125,8 @@ void	*monitoring(void *global)
 		i = 0;
 		while (i < all->count_philo)
 		{
-			if (all->t2d < get_time(all->philo[i].time_life))
+			if (all->t2d < get_time(all->philo[i].time_life) || \
+				all->philo[i].count_eat == all->must_e)
 			{
 				all->philo->is_dead = 1;
 				print_status(all->philo, get_time(all->start_time), "die");
@@ -174,20 +178,22 @@ void	init_arg(t_all *all, char **arg)
 	if (arg[5] != NULL)
 		all->must_e = ft_atoi(arg[5]);
 	else
-		all->must_e = 0;
+		all->must_e = -1;
 }
 
 int	main(int argc, char **argv)
 {
-	t_all all;
+	t_all *all;
 
-	all.start_time = get_time(0);
+	all = malloc(sizeof(t_all));
+	all->start_time = get_time(0);
 	if (argc < 5 || argc > 6)
 		printf("Invalid arguments");
 	else
 	{
-		init_arg(&all, argv);
-		start_philo(&all);
+		init_arg(all, argv);
+		start_philo(all);
 	}
+	free(all);
 	return(0);
 }
