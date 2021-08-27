@@ -1,27 +1,27 @@
 NAME = philo
 
-SRC = main.c ft_atoi.c
+HEADER = includes/philo.h
 
-CC = gcc -Wall -Werror -Wextra
+LIST = philo.c srcs/utils.c srcs/monitoring.c srcs/necessary_funcs.c srcs/print_status.c srcs/process_philo.c
 
-HEAD = includes/philo.h
+FLAGS = -Wall -Wextra -Werror
 
-all:$(NAME)
+OBJ = $(LIST:.c=.o)
 
-$(NAME):$(SRC) 
-	$(CC) $(SRC)
-	mv a.out ./philo
+.PHONY : all clean fclean re
 
-clean:
-	rm -rf $(NAME)
+all : $(NAME)
 
-fclean: clean
-		rm *.gch
+%.o : %.c $(HEADER)
+	gcc $(FLAGS) -I $(HEADER) -c $< -o $@
 
-norm:
-	norminette $(SRC)
-	norminette 
+${NAME} : $(OBJ) $(HEADER)
+	gcc $(FLAGS) $(OBJ) -o $(NAME)
 
-re: fclean all
+clean :
+	$(RM) $(OBJ)
 
-PHONY: all clean fclean re
+fclean : clean
+	$(RM) $(NAME)
+
+re : fclean all
